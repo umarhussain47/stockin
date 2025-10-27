@@ -5,7 +5,7 @@ import mimetypes
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import unquote, urlparse
 from dotenv import load_dotenv
-from models import init_db, save_recent, get_recents
+from models import init_db, save_recent, get_recents, add_favourite, remove_favourite, get_favourites
 
 # Load environment variables
 load_dotenv()
@@ -47,6 +47,17 @@ class SimpleHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({'recents': data}).encode('utf-8'))
             return
 
+        # --- API: Get Favourites ---
+        if path == '/api/favourites':
+            favs = get_favourites()
+            data = [
+                {'company_id': f[0], 'company_name': f[1], 'created_at': f[2]}
+                for f in favs
+            ]
+            self._set_headers(200, 'application/json')
+            self.wfile.write(json.dumps({'favourites': data}).encode('utf-8'))
+            return
+
         # --- Serve Static Files ---
         if path == '/' or path == '/index.html':
             path = '/research.html'
@@ -59,6 +70,8 @@ class SimpleHandler(BaseHTTPRequestHandler):
                 self.wfile.write(f.read())
         else:
             self.send_error(404, f'File Not Found: {self.path}')
+
+
 
     def do_POST(self):
         parsed = urlparse(self.path)
@@ -134,9 +147,37 @@ class SimpleHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))
             return
 
+        
+        # add to favourites
+        if path == '/api/favourites':
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length)
+            data = json.loads(body)
+
+            company_id = data.get('company_id')
+            company_name = data.get('company_name')
+            is_fav = data.get('isFavourite', True)
+
+            if not company_id or not company_name:
+                self._set_headers(400)
+                self.wfile.write(json.dumps({'error': 'company_id and company_name required'}).encode('utf-8'))
+                return
+
+            if is_fav:
+                add_favourite(company_id, company_name)
+            else:
+                remove_favourite(company_id)
+
+            self._set_headers(200)
+            self.wfile.write(json.dumps({'status': 'ok'}).encode('utf-8'))
+            return
+
         # --- Unknown Endpoint ---
         self._set_headers(404)
         self.wfile.write(json.dumps({'error': 'unknown endpoint'}).encode('utf-8'))
+
+            
+    
 
 
 def run(server_class=HTTPServer, handler_class=SimpleHandler, port=8000):
