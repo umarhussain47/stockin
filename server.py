@@ -158,7 +158,7 @@ class SimpleHandler(BaseHTTPRequestHandler):
             company_name = data.get('company_name')
             is_fav = data.get('isFavourite', True)
 
-            if not company_id or not company_name:
+            if company_name is None or company_name.strip() == '':
                 self._set_headers(400)
                 self.wfile.write(json.dumps({'error': 'company_id and company_name required'}).encode('utf-8'))
                 return

@@ -38,9 +38,40 @@
                     const div = document.createElement('div');
                     div.className = 'favourite';
                     div.innerHTML = `
-                <strong>${fav.company_name}</strong>
-                <div class="meta">Added at: ${fav.created_at}</div>
-            `;
+                    <strong>${fav.company_name}</strong>
+                    <div class="meta">Added at: ${fav.created_at}</div>
+                    <button class="removeBtn" title="Remove from favourites">🗑️</button>
+                `;
+
+                    const btn = div.querySelector('.removeBtn');
+                    btn.addEventListener('click', async () => {
+                        const confirmDelete = confirm(`Remove "${fav.company_name}" from favourites?`);
+                        if (!confirmDelete) return;
+
+                        try {
+                            const res = await fetch('/api/favourites', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    company_id: fav.id || 0,
+                                    company_name: fav.company_name,
+                                    isFavourite: false
+                                })
+                            });
+
+                            if (res.ok) {
+                                alert(`Removed ${fav.company_name} from favourites.`);
+                                div.remove();
+                            } else {
+                                const err = await res.json();
+                                alert(`Failed to remove: ${err.error || res.statusText}`);
+                            }
+                        } catch (err) {
+                            console.error('Error removing favourite:', err);
+                            alert('Error removing favourite.');
+                        }
+                    });
+
                     root.appendChild(div);
                 });
             } catch (err) {
@@ -50,8 +81,8 @@
         }
 
         loadFavourites();
-
     </script>
+
 </body>
 
 </html>
