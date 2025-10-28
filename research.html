@@ -7,28 +7,29 @@
 </head>
 <body>
     <nav class="nav">
-        <a href="/research.html">Research</a> |
-        <a href="/recents.html">Recents</a> |
+        <a href="/research.html">Research</a>
+        <a href="/recents.html">Recents</a>
         <a href="/favourites.html">Favourites</a>
     </nav>
+
     <main class="container">
-        <h1>Research</h1>
-        <div class="form">
-            <label>Company (e.g. Tesla)</label>
-            <input id="company" placeholder="Company name" />
-            <label>Tab</label>
+        <h1>Company Research Assistant</h1>
+
+        <div id="chatBox"></div>
+
+        <div class="chat-input">
+            <input id="company" placeholder="Company (e.g. Tesla)" />
             <select id="tab">
                 <option value="General">General</option>
                 <option value="News">News</option>
                 <option value="Financials">Financials</option>
                 <option value="Forecast">Forecast</option>
             </select>
-            <label>Question</label>
-            <textarea id="question" rows="4" placeholder="Ask anything about the company..."></textarea>
-            <button id="askBtn">Ask</button>
+            <textarea id="question" rows="1" placeholder="Ask anything..."></textarea>
+            <button id="askBtn">Send</button>
         </div>
-        <section id="answerSection" class="answer"></section>
     </main>
-    <script src="/static/app.js"></script>
+
+<script src="/static/app.js"></script>
 </body>
 </html>

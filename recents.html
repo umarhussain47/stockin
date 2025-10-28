@@ -1,42 +1,22 @@
 <!doctype html>
 <html>
-
 <head>
     <meta charset="utf-8" />
     <title>Stock In - Recents</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
-
 <body>
     <nav class="nav">
-        <a href="/research.html">Research</a> |
-        <a href="/recents.html">Recents</a> |
+        <a href="/research.html">Research</a>
+        <a href="/recents.html">Recents</a>
         <a href="/favourites.html">Favourites</a>
-
     </nav>
+
     <main class="container">
-        <h1>Recents</h1>
+        <h1>Recent Activity</h1>
         <div id="recentsList">Loading...</div>
     </main>
-    <!-- <script>
-        async function loadRecents() {
-            const res = await fetch('/api/recents');
-            const j = await res.json();
-            const root = document.getElementById('recentsList');
-            root.innerHTML = '';
-            if (!j.recents || j.recents.length === 0) {
-                root.innerText = 'No recent searches yet.';
-                return;
-            }
-            j.recents.forEach(r => {
-                const div = document.createElement('div');
-                div.className = 'recent';
-                div.innerHTML = `<strong>${r.company}</strong> — <em>${r.tab}</em><div class="prompt">Q: ${r.prompt}</div><details><summary>Answer</summary><div class="response">${r.response}</div><div class="meta">At: ${r.created_at}</div></details>`;
-                root.appendChild(div);
-            });
-        }
-        loadRecents();
-    </script> -->
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     async function loadRecents() {
@@ -45,86 +25,76 @@ document.addEventListener('DOMContentLoaded', () => {
         const root = document.getElementById('recentsList');
         if (!root) return console.error("recentsList element not found");
 
-        root.innerHTML = '';
-
         if (!j.recents || j.recents.length === 0) {
             root.innerText = 'No recent searches yet.';
             return;
         }
 
-        j.recents.forEach(r => {
-            const div = document.createElement('div');
-            div.className = 'recent';
+        root.innerHTML = `
+            <div class="recent-container">
+                ${j.recents.map(r => `
+                    <div class="recent-card">
+                        <h3>${r.company} — <small><em>${r.tab}</em></small></h3>
+                        <p>Q: ${r.prompt}</p>
+                        <details>
+                            <summary>Answer</summary>
+                            <div class="response">${r.response}</div>
+                            <div class="meta">At: ${r.created_at}</div>
+                        </details>
+                        <div class="recent-buttons">
+                            <button class="fav-btn" data-company="${r.company}">⭐ Favourite</button>
+                            <button class="remove-btn" data-id="${r.id}">🗑 Remove</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
 
-            const star = document.createElement('span');
-            star.innerHTML = '⭐';
-            star.style.cursor = 'pointer';
-            star.style.marginRight = '8px';
-            star.title = 'Add to favourites';
-            star.onclick = async () => {
+        // Attach button logic after rendering
+        document.querySelectorAll('.fav-btn').forEach(btn => {
+            btn.onclick = async () => {
+                const company = btn.dataset.company;
                 try {
                     const favRes = await fetch('/api/favourites');
                     const favs = await favRes.json();
-                    const exists = favs.favourites.some(f => f.company_name.toLowerCase() === r.company.toLowerCase());
-                    if (exists) return alert(`${r.company} is already in favourites.`);
+                    const exists = favs.favourites.some(f => f.company_name.toLowerCase() === company.toLowerCase());
+                    if (exists) return alert(`${company} is already in favourites.`);
 
                     const postRes = await fetch('/api/favourites', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            company_id: 0,
-                            company_name: r.company,
-                            isFavourite: true
-                        })
+                        body: JSON.stringify({ company_id: 0, company_name: company, isFavourite: true })
                     });
-
-                    postRes.ok ? alert(`${r.company} added to favourites!`) : alert(`Failed to add ${r.company}.`);
+                    postRes.ok ? alert(`${company} added to favourites!`) : alert(`Failed to add ${company}.`);
                 } catch {
                     alert('Error adding to favourites.');
                 }
             };
+        });
 
-            const removeBtn = document.createElement('button');
-            removeBtn.textContent = '🗑️ Remove';
-            removeBtn.style.marginLeft = '10px';
-            removeBtn.onclick = async () => {
-                const confirmDelete = confirm(`Remove recent entry for "${r.company}"?`);
+        document.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.onclick = async () => {
+                const id = btn.dataset.id;
+                const confirmDelete = confirm(`Remove recent entry?`);
                 if (!confirmDelete) return;
 
                 const res = await fetch('/api/remove_recent', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: r.id })
+                    body: JSON.stringify({ id })
                 });
                 if (res.ok) {
-                    alert(`Removed "${r.company}" from recents.`);
+                    alert(`Removed recent entry.`);
                     loadRecents();
                 } else {
                     alert('Failed to remove.');
                 }
             };
-
-            div.innerHTML = `
-                <strong>${r.company}</strong> — <em>${r.tab}</em>
-                <div class="prompt">Q: ${r.prompt}</div>
-                <details>
-                    <summary>Answer</summary>
-                    <div class="response">${r.response}</div>
-                    <div class="meta">At: ${r.created_at}</div>
-                </details>
-            `;
-
-            div.prepend(star);
-            div.appendChild(removeBtn);
-            root.appendChild(div);
         });
     }
 
     loadRecents();
 });
 </script>
-
-
 </body>
-
 </html>
