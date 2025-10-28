@@ -5,7 +5,7 @@ import mimetypes
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import unquote, urlparse
 from dotenv import load_dotenv
-from models import init_db, save_recent, get_recents, add_favourite, remove_favourite, get_favourites
+from models import init_db, save_recent, get_recents, add_favourite, remove_favourite, get_favourites, remove_recent
 
 # Load environment variables
 load_dotenv()
@@ -171,6 +171,27 @@ class SimpleHandler(BaseHTTPRequestHandler):
             self._set_headers(200)
             self.wfile.write(json.dumps({'status': 'ok'}).encode('utf-8'))
             return
+        
+        # --- API: Remove Recent ---
+        if path == '/api/remove_recent':
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length)
+            data = json.loads(body)
+            rec_id = data.get('id')
+
+            if not rec_id:
+                self._set_headers(400)
+                self.wfile.write(json.dumps({'error': 'id required'}).encode('utf-8'))
+                return
+
+            # Import or define remove_recent in models.py
+            from models import remove_recent
+            remove_recent(rec_id)
+
+            self._set_headers(200)
+            self.wfile.write(json.dumps({'status': 'deleted'}).encode('utf-8'))
+            return
+
 
         # --- Unknown Endpoint ---
         self._set_headers(404)

@@ -81,6 +81,13 @@ def get_recents(limit=50):
     conn.close()
     return rows
 
+def remove_recent(rec_id):
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM recents WHERE id = ?", (rec_id,))
+    conn.commit()
+    conn.close()
 
 def add_favourite(company_id, company_name):
     conn = sqlite3.connect(DB_PATH)
