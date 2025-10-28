@@ -38,12 +38,24 @@
 
                 j.favourites.forEach(fav => {
                     const div = document.createElement('div');
-                    div.className = 'favourite';
+                    div.className = 'favourite card';
                     div.innerHTML = `
-                        <strong>${fav.company_name}</strong>
-                        <div class="meta">Added at: ${fav.created_at}</div>
-                        <button class="removeBtn">🗑️ Remove</button>
-                        <button class="newsBtn">📰 View News</button>
+                        <div class="fav-header">
+                            <strong>${fav.company_name}</strong>
+                           <div class="meta">
+                    ${new Date(fav.created_at).toLocaleString([], {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })}
+                            </div>
+                        </div>
+                        <div class="fav-actions">
+                            <button class="removeBtn">🗑️ Remove</button>
+                            <button class="newsBtn">📰 View News</button>
+                        </div>
                     `;
 
                     // Remove button
@@ -67,7 +79,7 @@
                     // View News button
                     div.querySelector('.newsBtn').onclick = async () => {
                         const newsDiv = document.getElementById('newsSection');
-                        newsDiv.innerHTML = `<h2>Fetching news for ${fav.company_name}...</h2>`;
+                        newsDiv.innerHTML = `<div class="card"><h2>Fetching news for ${fav.company_name}...</h2></div>`;
                         try {
                             const res = await fetch('/api/news_for_company', {
                                 method: 'POST',
@@ -78,20 +90,21 @@
 
                             if (data.articles && data.articles.length > 0) {
                                 newsDiv.innerHTML = `
-                                    <h2>Latest news about ${fav.company_name}</h2>
-                                    <ul>
+                                    <div class="card">
+                                        <h2>Latest news about ${fav.company_name}</h2>
                                         ${data.articles.map(a => `
-                                            <li>
-                                                <a href="${a.url}" target="_blank">${a.title}</a>
+                                            <div class="news-item">
+                                                <a href="${a.url}" target="_blank">${a.title}</a><br>
                                                 <small>(${a.source || 'Unknown'} – ${new Date(a.publishedAt).toLocaleDateString()})</small>
-                                            </li>`).join('')}
-                                    </ul>
+                                            </div>
+                                        `).join('<hr>')}
+                                    </div>
                                 `;
                             } else {
-                                newsDiv.innerHTML = `<p>No recent news found for ${fav.company_name}.</p>`;
+                                newsDiv.innerHTML = `<div class="card"><p>No recent news found for ${fav.company_name}.</p></div>`;
                             }
                         } catch (err) {
-                            newsDiv.innerHTML = `<p>Error fetching news for ${fav.company_name}.</p>`;
+                            newsDiv.innerHTML = `<div class="card"><p>Error fetching news for ${fav.company_name}.</p></div>`;
                         }
                     };
 
@@ -106,4 +119,5 @@
         loadFavourites();
     </script>
 </body>
+
 </html>

@@ -286,6 +286,63 @@ textarea:focus {
   50% { opacity: 1; }
 }
 
+/* Card layout for favourites and news */
+.card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 12px auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-width: 700px;
+}
+
+.fav-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fav-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.fav-actions button {
+    flex: 1;
+    padding: 8px 12px;
+    background: #007bff;
+    border: none;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.fav-actions button:hover {
+    background: #0056b3;
+}
+
+/* News section */
+.news-card {
+    margin-top: 24px;
+}
+
+.news-item {
+    margin-bottom: 10px;
+}
+
+.news-item a {
+    color: #333;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.news-item a:hover {
+    text-decoration: underline;
+}
+
+
 /* ======== FOOTER ======== */
 footer {
   text-align: center;
