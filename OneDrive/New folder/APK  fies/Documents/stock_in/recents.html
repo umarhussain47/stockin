@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Stock In - Recents</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body>
+    <nav class="nav">
+        <a href="/research.html">Research</a> |
+        <a href="/recents.html">Recents</a> |
+        <a href="/favourites.html">Favourites</a>
+
+    </nav>
+    <main class="container">
+        <h1>Recents</h1>
+        <div id="recentsList">Loading...</div>
+    </main>
+    <!-- <script>
+        async function loadRecents() {
+            const res = await fetch('/api/recents');
+            const j = await res.json();
+            const root = document.getElementById('recentsList');
+            root.innerHTML = '';
+            if (!j.recents || j.recents.length === 0) {
+                root.innerText = 'No recent searches yet.';
+                return;
+            }
+            j.recents.forEach(r => {
+                const div = document.createElement('div');
+                div.className = 'recent';
+                div.innerHTML = `<strong>${r.company}</strong> — <em>${r.tab}</em><div class="prompt">Q: ${r.prompt}</div><details><summary>Answer</summary><div class="response">${r.response}</div><div class="meta">At: ${r.created_at}</div></details>`;
+                root.appendChild(div);
+            });
+        }
+        loadRecents();
+    </script> -->
+    <script>
+    async function loadRecents() {
+        const res = await fetch('/api/recents');
+        const j = await res.json();
+        const root = document.getElementById('recentsList');
+        root.innerHTML = '';
+
+        if (!j.recents || j.recents.length === 0) {
+            root.innerText = 'No recent searches yet.';
+            return;
+        }
+
+        j.recents.forEach(r => {
+            const div = document.createElement('div');
+            div.className = 'recent';
+
+            // star icon
+            const star = document.createElement('span');
+            star.innerHTML = '⭐';
+            star.style.cursor = 'pointer';
+            star.style.marginRight = '8px';
+            star.title = 'Add to favourites';
+
+            star.onclick = async () => {
+                try {
+                    // check if already favourite
+                    const favRes = await fetch('/api/favourites');
+                    const favs = await favRes.json();
+                    const exists = favs.favourites.some(f => f.company_name.toLowerCase() === r.company.toLowerCase());
+                    if (exists) {
+                        alert(`${r.company} is already in favourites.`);
+                        return;
+                    }
+
+                    // send to API
+                    const postRes = await fetch('/api/favourites', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            company_id: 0,  // unknown, server can ignore or handle by name
+                            company_name: r.company,
+                            isFavourite: true
+                        })
+                    });
+
+                    if (postRes.ok) {
+                        alert(`${r.company} added to favourites!`);
+                    } else {
+                        alert(`Failed to add ${r.company} to favourites.`);
+                    }
+                } catch (err) {
+                    console.error('Error adding favourite:', err);
+                    alert('Error adding to favourites.');
+                }
+            };
+
+            div.innerHTML = `<strong>${r.company}</strong> — <em>${r.tab}</em>
+                <div class="prompt">Q: ${r.prompt}</div>
+                <details><summary>Answer</summary>
+                <div class="response">${r.response}</div>
+                <div class="meta">At: ${r.created_at}</div>
+                </details>`;
+
+            // insert star before the strong tag
+            div.prepend(star);
+            root.appendChild(div);
+        });
+    }
+
+    loadRecents();
+</script>
+
+</body>
+
+</html>
