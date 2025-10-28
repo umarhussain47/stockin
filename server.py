@@ -204,7 +204,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({'error': 'company_name required'}).encode())
                 return
 
-            import requests
             API_KEY = os.getenv("NEWSAPI_KEY")
             url = f"https://newsapi.org/v2/everything?q={requests.utils.quote(company_name)}&sortBy=publishedAt&language=en&apiKey={API_KEY}"
             try:
