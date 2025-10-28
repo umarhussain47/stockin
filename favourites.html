@@ -12,12 +12,14 @@
         <a href="/research.html">Research</a> |
         <a href="/recents.html">Recents</a> |
         <a href="/favourites.html">Favourites</a>
-
     </nav>
+
     <main class="container">
         <h1>Favourites</h1>
         <div id="favList">Loading...</div>
+        <div id="newsSection" class="news-card"></div>
     </main>
+
     <script>
         async function loadFavourites() {
             const root = document.getElementById('favList');
@@ -38,39 +40,60 @@
                     const div = document.createElement('div');
                     div.className = 'favourite';
                     div.innerHTML = `
-                    <strong>${fav.company_name}</strong>
-                    <div class="meta">Added at: ${fav.created_at}</div>
-                    <button class="removeBtn" title="Remove from favourites">🗑️</button>
-                `;
+                        <strong>${fav.company_name}</strong>
+                        <div class="meta">Added at: ${fav.created_at}</div>
+                        <button class="removeBtn">🗑️ Remove</button>
+                        <button class="newsBtn">📰 View News</button>
+                    `;
 
-                    const btn = div.querySelector('.removeBtn');
-                    btn.addEventListener('click', async () => {
-                        const confirmDelete = confirm(`Remove "${fav.company_name}" from favourites?`);
-                        if (!confirmDelete) return;
+                    // Remove button
+                    div.querySelector('.removeBtn').onclick = async () => {
+                        if (!confirm(`Remove "${fav.company_name}" from favourites?`)) return;
+                        const res = await fetch('/api/favourites', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                company_id: fav.id || 0,
+                                company_name: fav.company_name,
+                                isFavourite: false
+                            })
+                        });
+                        if (res.ok) {
+                            alert(`Removed ${fav.company_name}`);
+                            div.remove();
+                        }
+                    };
 
+                    // View News button
+                    div.querySelector('.newsBtn').onclick = async () => {
+                        const newsDiv = document.getElementById('newsSection');
+                        newsDiv.innerHTML = `<h2>Fetching news for ${fav.company_name}...</h2>`;
                         try {
-                            const res = await fetch('/api/favourites', {
+                            const res = await fetch('/api/news_for_company', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    company_id: fav.id || 0,
-                                    company_name: fav.company_name,
-                                    isFavourite: false
-                                })
+                                body: JSON.stringify({ company_name: fav.company_name })
                             });
+                            const data = await res.json();
 
-                            if (res.ok) {
-                                alert(`Removed ${fav.company_name} from favourites.`);
-                                div.remove();
+                            if (data.articles && data.articles.length > 0) {
+                                newsDiv.innerHTML = `
+                                    <h2>Latest news about ${fav.company_name}</h2>
+                                    <ul>
+                                        ${data.articles.map(a => `
+                                            <li>
+                                                <a href="${a.url}" target="_blank">${a.title}</a>
+                                                <small>(${a.source || 'Unknown'} – ${new Date(a.publishedAt).toLocaleDateString()})</small>
+                                            </li>`).join('')}
+                                    </ul>
+                                `;
                             } else {
-                                const err = await res.json();
-                                alert(`Failed to remove: ${err.error || res.statusText}`);
+                                newsDiv.innerHTML = `<p>No recent news found for ${fav.company_name}.</p>`;
                             }
                         } catch (err) {
-                            console.error('Error removing favourite:', err);
-                            alert('Error removing favourite.');
+                            newsDiv.innerHTML = `<p>Error fetching news for ${fav.company_name}.</p>`;
                         }
-                    });
+                    };
 
                     root.appendChild(div);
                 });
@@ -82,7 +105,5 @@
 
         loadFavourites();
     </script>
-
 </body>
-
 </html>

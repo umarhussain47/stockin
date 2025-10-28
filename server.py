@@ -57,6 +57,8 @@ class SimpleHandler(BaseHTTPRequestHandler):
             self._set_headers(200, 'application/json')
             self.wfile.write(json.dumps({'favourites': data}).encode('utf-8'))
             return
+        
+        
 
         # --- Serve Static Files ---
         if path == '/' or path == '/index.html':
@@ -191,6 +193,44 @@ class SimpleHandler(BaseHTTPRequestHandler):
             self._set_headers(200)
             self.wfile.write(json.dumps({'status': 'deleted'}).encode('utf-8'))
             return
+        
+        if path == '/api/news_for_company':
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length)
+            data = json.loads(body)
+            company_name = data.get('company_name')
+            if not company_name:
+                self._set_headers(400)
+                self.wfile.write(json.dumps({'error': 'company_name required'}).encode())
+                return
+
+            import requests
+            API_KEY = os.getenv("NEWSAPI_KEY")
+            url = f"https://newsapi.org/v2/everything?q={requests.utils.quote(company_name)}&sortBy=publishedAt&language=en&apiKey={API_KEY}"
+            try:
+                r = requests.get(url, timeout=20)
+                if r.status_code == 200:
+                    resp = r.json()
+                    articles = [
+                        {
+                            "title": a.get("title"),
+                            "url": a.get("url"),
+                            "source": a.get("source", {}).get("name"),
+                            "publishedAt": a.get("publishedAt")
+                        }
+                        for a in resp.get("articles", [])[:5]
+                    ]
+                else:
+                    articles = []
+            except Exception as e:
+                articles = []
+                print("News API error:", str(e))
+
+            self._set_headers(200)
+            self.wfile.write(json.dumps({'company': company_name, 'articles': articles}).encode())
+            return
+
+
 
 
         # --- Unknown Endpoint ---
