@@ -6,6 +6,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import unquote, urlparse
 from dotenv import load_dotenv
 from models import init_db, save_recent, get_recents, add_favourite, remove_favourite, get_favourites, remove_recent
+from auth_handler import signup_user, login_user, logout_user, check_auth
 
 # Load environment variables
 load_dotenv()
@@ -62,7 +63,7 @@ class SimpleHandler(BaseHTTPRequestHandler):
 
         # --- Serve Static Files ---
         if path == '/' or path == '/index.html':
-            path = '/research.html'
+            path = '/login.html'
 
         file_path = os.path.join(STATIC_DIR, path.lstrip('/'))
         if os.path.isfile(file_path):
@@ -79,8 +80,103 @@ class SimpleHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = unquote(parsed.path)
 
+        # --- AUTH: Signup ---
+        if path == '/api/auth/signup':
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length)
+            data = json.loads(body)
+            
+            email = data.get('email')
+            password = data.get('password')
+            
+            if not email or not password:
+                self._set_headers(400)
+                self.wfile.write(json.dumps({'error': 'email and password required'}).encode())
+                return
+            
+            result = signup_user(email, password)
+            
+            if result['success']:
+                # Check if session exists (auto-confirm) or requires email verification
+                if result['session']:
+                    self._set_headers(200)
+                    self.wfile.write(json.dumps({
+                        'message': 'Signup successful.',
+                        'session': {
+                            'access_token': result['session'].access_token,
+                            'user': {
+                                'id': result['user'].id,
+                                'email': result['user'].email
+                            }
+                        }
+                    }).encode())
+                else:
+                    # Email confirmation required
+                    self._set_headers(200)
+                    self.wfile.write(json.dumps({
+                        'message': 'Signup successful. Please check your email to verify your account.',
+                        'requires_verification': True,
+                        'user': {
+                            'id': result['user'].id,
+                            'email': result['user'].email
+                        }
+                    }).encode())
+            else:
+                self._set_headers(400)
+                self.wfile.write(json.dumps({'error': result['error']}).encode())
+            return
+
+        # --- AUTH: Login ---
+        if path == '/api/auth/login':
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length)
+            data = json.loads(body)
+            
+            email = data.get('email')
+            password = data.get('password')
+            
+            if not email or not password:
+                self._set_headers(400)
+                self.wfile.write(json.dumps({'error': 'email and password required'}).encode())
+                return
+            
+            result = login_user(email, password)
+            
+            if result['success']:
+                self._set_headers(200)
+                self.wfile.write(json.dumps({
+                    'message': 'Login successful',
+                    'session': {
+                        'access_token': result['session'].access_token,
+                        'user': {
+                            'id': result['user'].id,
+                            'email': result['user'].email
+                        }
+                    }
+                }).encode())
+            else:
+                self._set_headers(401)
+                self.wfile.write(json.dumps({'error': result['error']}).encode())
+            return
+
+        # --- AUTH: Logout ---
+        if path == '/api/auth/logout':
+            auth_header = self.headers.get('Authorization')
+            if auth_header:
+                token = auth_header.replace('Bearer ', '')
+                logout_user(token)
+            
+            self._set_headers(200)
+            self.wfile.write(json.dumps({'message': 'Logged out'}).encode())
+            return
+            
         # --- API: Research Query ---
         if path == '/api/research':
+             # Check authentication
+            user = check_auth(self)
+            if not user:
+                return
+            
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length)
             try:

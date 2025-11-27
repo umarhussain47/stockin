@@ -1,22 +1,3 @@
-// document.getElementById('askBtn').addEventListener('click', async ()=>{
-//     const company = document.getElementById('company').value.trim();
-//     const tab = document.getElementById('tab').value;
-//     const question = document.getElementById('question').value.trim();
-//     const out = document.getElementById('answerSection');
-//     out.innerText = 'Thinking...';
-//     const res = await fetch('/api/research', {
-//         method: 'POST',
-//         headers: {'Content-Type':'application/json'},
-//         body: JSON.stringify({company, tab, question})
-//     });
-//     if(res.ok){
-//         const j = await res.json();
-//         out.innerText = j.answer;
-//     } else {
-//         out.innerText = 'Error: ' + (await res.text());
-//     }
-// });
-
 document.addEventListener('DOMContentLoaded', () => {
     const chatBox = document.getElementById('chatBox');
     const askBtn = document.getElementById('askBtn');
@@ -49,18 +30,25 @@ document.addEventListener('DOMContentLoaded', () => {
         chatBox.scrollTop = chatBox.scrollHeight;
 
         try {
-            const res = await fetch('/api/research', {
+            // Use authFetch instead of regular fetch
+            const res = await authFetch('/api/research', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ company, tab, question })
             });
+            
+            // authFetch returns null and redirects on 401
+            if (!res) {
+                chatBox.removeChild(typing);
+                return;
+            }
+            
             const data = await res.json();
             chatBox.removeChild(typing);
             addMessage(data.answer || "No response received.", 'bot');
         } catch (err) {
             chatBox.removeChild(typing);
             addMessage("Error fetching response.", 'bot');
+            console.error('Research error:', err);
         }
     });
 });
-
