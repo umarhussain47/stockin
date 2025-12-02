@@ -19,6 +19,14 @@
         <div id="favList">Loading...</div>
         <div id="newsSection" class="news-card"></div>
     </main>
+    <script src="/static/auth_utils.js"></script>
+    <script>
+        // ensure DOM loaded first and then initialize auth UI
+        window.addEventListener('DOMContentLoaded', () => {
+            if (typeof initAuth === 'function') initAuth();
+        });
+    </script>
+    <script src="/static/app.js"></script>
 
     <script>
         async function loadFavourites() {

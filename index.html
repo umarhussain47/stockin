@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Stock In</title>
+  <script>
+    // run before any layout/DOM content — avoids flash
+    (function(){
+      try {
+        if (localStorage.getItem('access_token')) {
+          // go to protected app
+          window.location.replace('/research.html');
+        } else {
+          // go to login
+          window.location.replace('/login.html');
+        }
+      } catch (e) {
+        // fallback
+        window.location.replace('/login.html');
+      }
+    })();
+  </script>
+</head>
+<body></body>
+</html>
