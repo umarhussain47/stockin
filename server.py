@@ -11,8 +11,7 @@ from models import init_db, save_recent, get_recents, add_favourite, remove_favo
 load_dotenv()
 
 GROQ_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")  # default Groq model
-
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant") # default Groq model
 # Initialize the database
 init_db()
 
@@ -58,8 +57,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({'favourites': data}).encode('utf-8'))
             return
         
-        
-
         # --- Serve Static Files ---
         if path == '/' or path == '/index.html':
             path = '/research.html'
@@ -72,7 +69,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
                 self.wfile.write(f.read())
         else:
             self.send_error(404, f'File Not Found: {self.path}')
-
 
 
     def do_POST(self):
@@ -122,7 +118,7 @@ class SimpleHandler(BaseHTTPRequestHandler):
                         )
 
                         print("Groq status:", r.status_code)
-                        print("Groq response:", r.text[:400])  # debug log
+                        print("Groq response:", r.text[:400])
 
                         if r.status_code == 200:
                             j = r.json()
@@ -194,6 +190,50 @@ class SimpleHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({'status': 'deleted'}).encode('utf-8'))
             return
         
+        # --- API: General News Feed (NEW IMPLEMENTATION) ---
+        if path == '/api/news_feed':
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length)
+            data = json.loads(body)
+            
+            # Categories to fetch (default if none provided)
+            categories = data.get('categories', ["technology", "business", "health", "energy"])
+            
+            API_KEY = os.getenv("NEWSAPI_KEY")
+            all_news = {}
+            
+            for category in categories:
+                # Using 'top-headlines' for general categories
+                url = f"https://newsapi.org/v2/top-headlines?country=us&category={requests.utils.quote(category)}&pageSize=5&apiKey={API_KEY}"
+                
+                try:
+                    r = requests.get(url, timeout=20)
+                    if r.status_code == 200:
+                        resp = r.json()
+                        articles = [
+                            {
+                                "title": a.get("title"),
+                                "description": a.get("description"),
+                                "url": a.get("url"),
+                                "source": a.get("source", {}).get("name"),
+                                "publishedAt": a.get("publishedAt")
+                            }
+                            for a in resp.get("articles", [])
+                        ]
+                        all_news[category] = articles
+                    else:
+                        print(f"News API error for {category}: Status {r.status_code}")
+                        all_news[category] = []
+                        
+                except Exception as e:
+                    print(f"News API call failed for {category}: {str(e)}")
+                    all_news[category] = []
+
+            self._set_headers(200)
+            self.wfile.write(json.dumps({'categories': all_news}).encode('utf-8'))
+            return
+        
+        # --- API: News for Company (Existing) ---
         if path == '/api/news_for_company':
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length)
@@ -230,16 +270,11 @@ class SimpleHandler(BaseHTTPRequestHandler):
             return
 
 
-
-
         # --- Unknown Endpoint ---
         self._set_headers(404)
         self.wfile.write(json.dumps({'error': 'unknown endpoint'}).encode('utf-8'))
 
-            
-    
-
-
+        
 def run(server_class=HTTPServer, handler_class=SimpleHandler, port=8000):
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
