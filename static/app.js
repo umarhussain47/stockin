@@ -52,6 +52,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const protectedPaths = ['/research.html', '/recents.html', '/favourites.html'];
     const currentPath = window.location.pathname;
 
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault(); // Stop the link from navigating immediately
+            
+            // 1. Clear the JWT from local storage
+            localStorage.removeItem('access_token');
+            
+            // 2. Redirect the user to the login page
+            window.location.href = '/login.html';
+        });
+    }
+
     if (protectedPaths.includes(currentPath)) {
         const token = localStorage.getItem('access_token');
         if (!token) {

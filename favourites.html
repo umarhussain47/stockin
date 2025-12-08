@@ -9,10 +9,20 @@
 
 <body>
     <nav class="nav">
-        <a href="/research.html">Research</a> |
-        <a href="/recents.html">Recents</a> |
-        <a href="/favourites.html">Favourites</a>
+    <div class="nav-brand">
+        <a href="/research.html">Stock In</a> 
+    </div>
+    
+    <div class="nav-links-main">
+        <a href="/research.html">Research</a>
+        <a href="/recents.html">Recents</a>
+        <a href="/favourites.html" class="active">Favourites</a>
         <a href="/news.html">News</a>
+    </div>
+
+    <div class="nav-links-utility">
+        <a href="#" id="logoutBtn">Logout</a>
+    </div>
     </nav>
 
     <main class="container">
@@ -21,13 +31,61 @@
         <div id="newsSection" class="news-card"></div>
     </main>
 
+    <script src="/static/app.js"></script>
+
     <script>
+        // Note: The apiFetch function and Auth Guard are now loaded from app.js
+        
+        // Helper function for fetching news (unprotected route)
+        async function fetchCompanyNews(companyName) {
+            const newsDiv = document.getElementById('newsSection');
+            newsDiv.innerHTML = `<div class="card"><h2>Fetching news for ${companyName}...</h2></div>`;
+
+            try {
+                // NOTE: /api/news_for_company is UNPROTECTED, so standard fetch is acceptable, 
+                // but apiFetch is still generally safer for error handling.
+                const res = await apiFetch('/api/news_for_company', {
+                    method: 'POST',
+                    // No Authorization header needed by the server for this route
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ company_name: companyName })
+                });
+
+                if (res.status === 401) return; // Should not happen for news, but handle case.
+
+                const data = await res.json();
+
+                if (data.articles && data.articles.length > 0) {
+                    newsDiv.innerHTML = `
+                        <div class="card">
+                            <h2>Latest news about ${companyName}</h2>
+                            ${data.articles.map(a => `
+                                <div class="news-item">
+                                    <a href="${a.url}" target="_blank">${a.title}</a><br>
+                                    <small>(${a.source || 'Unknown'} – ${new Date(a.publishedAt).toLocaleDateString()})</small>
+                                </div>
+                            `).join('<hr>')}
+                        </div>
+                    `;
+                } else {
+                    newsDiv.innerHTML = `<div class="card"><p>No recent news found for ${companyName}.</p></div>`;
+                }
+            } catch (err) {
+                console.error('Error fetching news:', err);
+                newsDiv.innerHTML = `<div class="card"><p>Error fetching news for ${companyName}.</p></div>`;
+            }
+        }
+
         async function loadFavourites() {
             const root = document.getElementById('favList');
             root.innerHTML = 'Loading...';
 
             try {
-                const res = await fetch('/api/favourites');
+                // FIXED 1/3: Use apiFetch for protected GET endpoint
+                const res = await apiFetch('/api/favourites'); 
+                
+                if (res.status === 401) return; // Redirect handled by apiFetch
+                
                 const j = await res.json();
 
                 root.innerHTML = '';
@@ -40,73 +98,61 @@
                 j.favourites.forEach(fav => {
                     const div = document.createElement('div');
                     div.className = 'favourite card';
+                    
+                    // Use fav.company_id if available, otherwise fallback (SQLite sometimes returns 0)
+                    const companyIdToUse = fav.company_id || 0; 
+                    
                     div.innerHTML = `
                         <div class="fav-header">
                             <strong>${fav.company_name}</strong>
                            <div class="meta">
-                    ${new Date(fav.created_at).toLocaleString([], {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    })}
+                            ${new Date(fav.created_at).toLocaleString([], {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })}
                             </div>
                         </div>
                         <div class="fav-actions">
-                            <button class="removeBtn">🗑️ Remove</button>
-                            <button class="newsBtn">📰 View News</button>
+                            <button class="removeBtn" data-id="${companyIdToUse}" data-name="${fav.company_name}">🗑️ Remove</button>
+                            <button class="newsBtn" data-name="${fav.company_name}">📰 View News</button>
                         </div>
                     `;
 
                     // Remove button
-                    div.querySelector('.removeBtn').onclick = async () => {
-                        if (!confirm(`Remove "${fav.company_name}" from favourites?`)) return;
-                        const res = await fetch('/api/favourites', {
+                    div.querySelector('.removeBtn').onclick = async (e) => {
+                        const btn = e.target;
+                        const companyName = btn.dataset.name;
+                        const companyId = btn.dataset.id;
+                        
+                        if (!confirm(`Remove "${companyName}" from favourites?`)) return;
+                        
+                        // FIXED 2/3: Use apiFetch for protected POST endpoint
+                        const removeRes = await apiFetch('/api/favourites', { 
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                company_id: fav.id || 0,
-                                company_name: fav.company_name,
+                                company_id: companyId,
+                                company_name: companyName, // Added for completeness, though backend only needs ID
                                 isFavourite: false
                             })
                         });
-                        if (res.ok) {
-                            alert(`Removed ${fav.company_name}`);
-                            div.remove();
+                        
+                        if (removeRes.status === 401) return;
+                        
+                        if (removeRes.ok) {
+                            alert(`Removed ${companyName}`);
+                            loadFavourites(); // Refresh the list
+                        } else {
+                             alert(`Failed to remove ${companyName}.`);
                         }
                     };
 
                     // View News button
-                    div.querySelector('.newsBtn').onclick = async () => {
-                        const newsDiv = document.getElementById('newsSection');
-                        newsDiv.innerHTML = `<div class="card"><h2>Fetching news for ${fav.company_name}...</h2></div>`;
-                        try {
-                            const res = await fetch('/api/news_for_company', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ company_name: fav.company_name })
-                            });
-                            const data = await res.json();
-
-                            if (data.articles && data.articles.length > 0) {
-                                newsDiv.innerHTML = `
-                                    <div class="card">
-                                        <h2>Latest news about ${fav.company_name}</h2>
-                                        ${data.articles.map(a => `
-                                            <div class="news-item">
-                                                <a href="${a.url}" target="_blank">${a.title}</a><br>
-                                                <small>(${a.source || 'Unknown'} – ${new Date(a.publishedAt).toLocaleDateString()})</small>
-                                            </div>
-                                        `).join('<hr>')}
-                                    </div>
-                                `;
-                            } else {
-                                newsDiv.innerHTML = `<div class="card"><p>No recent news found for ${fav.company_name}.</p></div>`;
-                            }
-                        } catch (err) {
-                            newsDiv.innerHTML = `<div class="card"><p>Error fetching news for ${fav.company_name}.</p></div>`;
-                        }
+                    div.querySelector('.newsBtn').onclick = async (e) => {
+                        const companyName = e.target.dataset.name;
+                        fetchCompanyNews(companyName);
                     };
 
                     root.appendChild(div);

@@ -93,9 +93,15 @@ class SimpleHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({'favourites': data}).encode('utf-8'))
             return
         
-        # --- Serve Static Files (Unprotected) ---
+        # server.py (Inside SimpleHandler.do_GET)
+
+        # --- Serve Static Files ---
+        # CHANGE THIS LINE
         if path == '/' or path == '/index.html':
-            path = '/research.html'
+            path = '/login.html' # <--- CHANGED FROM '/research.html' TO '/login.html'
+
+        file_path = os.path.join(STATIC_DIR, path.lstrip('/'))
+        # ... (rest of the file)
 
         file_path = os.path.join(STATIC_DIR, path.lstrip('/'))
         if os.path.isfile(file_path):

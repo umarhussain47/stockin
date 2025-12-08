@@ -1,29 +1,42 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8" />
     <title>Stock In - Login</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
+
 <body>
     <nav class="nav">
-        <a href="/research.html">Research</a>
-        <a href="/recents.html">Recents</a>
-        <a href="/favourites.html">Favourites</a>
-        <a href="/news.html">News</a>
+    <div class="nav-brand">
+        <a href="/login.html">Stock In</a> 
+    </div>
+    
+    <div class="nav-links-main">
+        </div>
+
+    <div class="nav-links-utility">
         <a href="/login.html" class="active">Login</a>
         <a href="/signup.html">Signup</a>
+    </div>
     </nav>
 
     <main class="container">
-        <h1>Login to Stock In</h1>
+        <div class="auth-card">
+            <h1>Welcome Back</h1>
+            <p class="subtitle">Log in to continue</p>
 
-        <div class="auth-form">
-            <input id="email" type="email" placeholder="Email" required />
-            <input id="password" type="password" placeholder="Password" required />
-            <button id="loginBtn">Log In</button>
-            <p id="message" style="color: red;"></p>
-            <p>Don't have an account? <a href="/signup.html">Sign Up</a></p>
+            <div class="auth-form">
+                <input id="email" type="email" placeholder="Email" required />
+                <input id="password" type="password" placeholder="Password" required />
+                <button id="loginBtn" class="btn">Log In</button>
+                <p id="message" class="error"></p>
+
+                <p class="switch-text">
+                    Don't have an account?
+                    <a href="/signup.html">Sign Up</a>
+                </p>
+            </div>
         </div>
     </main>
 
