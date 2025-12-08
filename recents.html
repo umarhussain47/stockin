@@ -8,7 +8,7 @@
 <body>
     <nav class="nav">
         <a href="/research.html">Research</a>
-        <a href="/recents.html">Recents</a>
+        <a href="/recents.html" class="active">Recents</a>
         <a href="/favourites.html">Favourites</a>
         <a href="/news.html">News</a>
     </nav>
@@ -18,10 +18,19 @@
         <div id="recentsList">Loading...</div>
     </main>
 
+<script src="/static/app.js"></script> 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     async function loadRecents() {
-        const res = await fetch('/api/recents');
+        // CHANGED: Use apiFetch for authenticated requests
+        const res = await apiFetch('/api/recents'); 
+        
+        if (res.status === 401) {
+            document.getElementById('recentsList').innerText = 'Access denied. Redirecting...';
+            // apiFetch handles the redirect, so we stop here.
+            return;
+        }
+
         const j = await res.json();
         const root = document.getElementById('recentsList');
         if (!root) return console.error("recentsList element not found");
@@ -56,16 +65,23 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.onclick = async () => {
                 const company = btn.dataset.company;
                 try {
-                    const favRes = await fetch('/api/favourites');
+                    // CHANGED: Use apiFetch for fetching favorites list
+                    const favRes = await apiFetch('/api/favourites'); 
+                    
+                    if (favRes.status === 401) return; // Handled by apiFetch
+                    
                     const favs = await favRes.json();
                     const exists = favs.favourites.some(f => f.company_name.toLowerCase() === company.toLowerCase());
                     if (exists) return alert(`${company} is already in favourites.`);
 
-                    const postRes = await fetch('/api/favourites', {
+                    // CHANGED: Use apiFetch for adding favorite
+                    const postRes = await apiFetch('/api/favourites', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ company_id: 0, company_name: company, isFavourite: true })
                     });
+                    
+                    if (postRes.status === 401) return; // Handled by apiFetch
+                    
                     postRes.ok ? alert(`${company} added to favourites!`) : alert(`Failed to add ${company}.`);
                 } catch {
                     alert('Error adding to favourites.');
@@ -79,11 +95,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const confirmDelete = confirm(`Remove recent entry?`);
                 if (!confirmDelete) return;
 
-                const res = await fetch('/api/remove_recent', {
+                // CHANGED: Use apiFetch for removing recent
+                const res = await apiFetch('/api/remove_recent', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id })
                 });
+                
+                if (res.status === 401) return; // Handled by apiFetch
+                
                 if (res.ok) {
                     alert(`Removed recent entry.`);
                     loadRecents();
@@ -94,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Call loadRecents only if the user is authenticated (app.js handles the initial check/redirect)
     loadRecents();
 });
 </script>
